@@ -7,10 +7,14 @@
 
 # Version
 readonly CLAUDEBOX_VERSION="2.0.0"
+export CLAUDEBOX_VERSION
 
 set -euo pipefail
 
 # Add error handler to show where script fails
+# Initialize variables to avoid SC2154
+exit_code=0
+i=0
 trap 'exit_code=$?; [[ $exit_code -eq 130 ]] && exit 130 || { echo "Error at line $LINENO: Command failed with exit code $exit_code" >&2; echo "Failed command: $BASH_COMMAND" >&2; echo "Call stack:" >&2; for i in ${!BASH_LINENO[@]}; do if [[ $i -gt 0 ]]; then echo "  at ${FUNCNAME[$i]} (${BASH_SOURCE[$i]}:${BASH_LINENO[$i-1]})" >&2; fi; done; }' ERR INT
 
 # ------------------------------------------------------------------ constants --
@@ -18,17 +22,21 @@ trap 'exit_code=$?; [[ $exit_code -eq 130 ]] && exit 130 || { echo "Error at lin
 get_script_path() {
     local source="${BASH_SOURCE[0]:-$0}"
     while [[ -L "$source" ]]; do
-        local dir="$(cd -P "$(dirname "$source")" && pwd)"
+        local dir
+        dir="$(cd -P "$(dirname "$source")" && pwd)"
         source="$(readlink "$source")"
         [[ $source != /* ]] && source="$dir/$source"
     done
     echo "$(cd -P "$(dirname "$source")" && pwd)/$(basename "$source")"
 }
 
-readonly SCRIPT_PATH="$(get_script_path)"
-readonly SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+SCRIPT_PATH="$(get_script_path)"
+readonly SCRIPT_PATH
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+readonly SCRIPT_DIR
 # Now that script is at root, SCRIPT_DIR is the repo/install root
 readonly INSTALL_ROOT="$HOME/.claudebox"
+export INSTALL_ROOT
 export SCRIPT_PATH
 export CLAUDEBOX_SCRIPT_DIR="${SCRIPT_DIR}"
 # Set PROJECT_DIR early (but allow override from environment)
@@ -189,7 +197,8 @@ main() {
         
         # Create core Dockerfile
         local core_dockerfile="$build_context/Dockerfile.core"
-        local base_dockerfile=$(cat "${root_dir}/build/Dockerfile") || error "Failed to read base Dockerfile"
+        local base_dockerfile
+        base_dockerfile=$(cat "${root_dir}/build/Dockerfile") || error "Failed to read base Dockerfile"
         
         # Remove profile installations and labels placeholders for core
         local core_dockerfile_content="$base_dockerfile"
@@ -200,7 +209,7 @@ main() {
         
         # Build core image
         docker build \
-            --progress=${BUILDKIT_PROGRESS:-auto} \
+            --progress="${BUILDKIT_PROGRESS:-auto}" \
             --build-arg BUILDKIT_INLINE_CACHE=1 \
             --build-arg USER_ID="$USER_ID" \
             --build-arg GROUP_ID="$GROUP_ID" \
@@ -211,7 +220,8 @@ main() {
             
             
         # Check if this is truly a first-time setup (no projects exist)
-        local project_count=$(ls -1d "$HOME/.claudebox/projects"/*/ 2>/dev/null | wc -l)
+        local project_count
+        project_count=$(find "$HOME/.claudebox/projects" -maxdepth 1 -type d 2>/dev/null | tail -n +2 | wc -l)
         
         if [[ $project_count -eq 0 ]]; then
             # First-time user - show welcome menu
@@ -238,7 +248,8 @@ main() {
             echo
         else
             # First install - check if they have projects
-            local project_count=$(ls -1d "$HOME/.claudebox/projects"/*/ 2>/dev/null | wc -l)
+            local project_count
+        project_count=$(find "$HOME/.claudebox/projects" -maxdepth 1 -type d 2>/dev/null | tail -n +2 | wc -l)
             if [[ $project_count -eq 0 ]]; then
                 # Show full welcome
                 show_first_time_welcome
@@ -266,7 +277,8 @@ main() {
     
     # Step 8: Always set up project variables
     # Get the actual parent folder name for the project
-    local parent_folder_name=$(generate_parent_folder_name "$PROJECT_DIR")
+    local parent_folder_name
+    parent_folder_name=$(generate_parent_folder_name "$PROJECT_DIR")
     
     # Get the slot to use (might be empty)
     project_folder_name=$(get_project_folder_name "$PROJECT_DIR")
@@ -296,7 +308,8 @@ main() {
     
     # Step 9: Run pre-flight validation for commands that need Docker
     if [[ -n "${CLI_SCRIPT_COMMAND}" ]]; then
-        local cmd_req=$(get_command_requirements "${CLI_SCRIPT_COMMAND}")
+        local cmd_req
+        cmd_req=$(get_command_requirements "${CLI_SCRIPT_COMMAND}")
         # Only run pre-flight for commands that need Docker or image
         if [[ "$cmd_req" == "docker" ]] || [[ "$cmd_req" == "image" ]]; then
             if ! preflight_check "${CLI_SCRIPT_COMMAND}" "${CLI_PASS_THROUGH[@]}"; then
@@ -372,7 +385,8 @@ main() {
                     docker_profiles_hash=$(printf '%s\n' "${docker_profiles[@]}" | sort | cksum | cut -d' ' -f1)
                 fi
                 
-                local image_profiles_hash=$(docker inspect "$IMAGE_NAME" --format '{{index .Config.Labels "claudebox.profiles"}}' 2>/dev/null || echo "")
+                local image_profiles_hash
+                image_profiles_hash=$(docker inspect "$IMAGE_NAME" --format '{{index .Config.Labels "claudebox.profiles"}}' 2>/dev/null || echo "")
                 
                 if [[ "$docker_profiles_hash" != "$image_profiles_hash" ]]; then
                     info "Docker-affecting profiles changed, rebuilding..."
@@ -384,7 +398,8 @@ main() {
         
         if [[ "$need_rebuild" == "true" ]]; then
             # Set rebuild timestamp to bust Docker cache when templates change
-            export CLAUDEBOX_REBUILD_TIMESTAMP=$(date +%s)
+            CLAUDEBOX_REBUILD_TIMESTAMP=$(date +%s)
+            export CLAUDEBOX_REBUILD_TIMESTAMP
             if [[ "$VERBOSE" == "true" ]]; then
                 echo "[DEBUG] About to build Docker image..." >&2
             fi
@@ -432,7 +447,8 @@ main() {
         # No script command - running Claude interactively
         # This is where we load saved default flags
         if [[ -n "${PROJECT_SLOT_DIR:-}" ]]; then
-            local slot_name=$(basename "$PROJECT_SLOT_DIR")
+            local slot_name
+            slot_name=$(basename "$PROJECT_SLOT_DIR")
             # parent_folder_name already set in step 8
             local container_name="claudebox-${parent_folder_name}-${slot_name}"
             
