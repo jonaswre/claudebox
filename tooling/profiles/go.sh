@@ -1,23 +1,24 @@
 #!/usr/bin/env bash
-# Rust profile for ClaudeBox
+# Go development profile for ClaudeBox
 set -euo pipefail
 
 case "${1:-}" in
     info)
-        printf '%s|%s\n' "rust" "Rust Development (installed via rustup)"
+        printf '%s|%s\n' "go" "Go Development (installed from upstream archive)"
         ;;
     packages)
-        # Rust doesn't need apt packages, installed via rustup
+        # Go is installed from tarball, not apt
         printf '%s\n' ""
         ;;
     dockerfile)
         cat << 'EOF'
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/home/claude/.cargo/bin:$PATH"
+RUN wget -O go.tar.gz https://golang.org/dl/go1.21.0.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go.tar.gz && \
+    rm go.tar.gz
+ENV PATH="/usr/local/go/bin:$PATH"
 EOF
         ;;
     depends)
-        # Rust benefits from core utilities
         printf '%s\n' "core"
         ;;
     *)

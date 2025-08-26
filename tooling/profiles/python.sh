@@ -1,23 +1,22 @@
 #!/usr/bin/env bash
-# Rust profile for ClaudeBox
+# Python development profile for ClaudeBox
 set -euo pipefail
 
 case "${1:-}" in
     info)
-        printf '%s|%s\n' "rust" "Rust Development (installed via rustup)"
+        printf '%s|%s\n' "python" "Python Development (managed via uv)"
         ;;
     packages)
-        # Rust doesn't need apt packages, installed via rustup
+        # Python packages are managed via uv, not apt
         printf '%s\n' ""
         ;;
     dockerfile)
         cat << 'EOF'
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-ENV PATH="/home/claude/.cargo/bin:$PATH"
+# Python profile - uv already installed in base image
+# Python venv and dev tools are managed via entrypoint flag system
 EOF
         ;;
     depends)
-        # Rust benefits from core utilities
         printf '%s\n' "core"
         ;;
     *)
