@@ -163,7 +163,6 @@ _cmd_add() {
                 fi
 
                 local current_packages=()
-                local current_packages=()
                 while IFS= read -r line; do
                     [[ -n "$line" ]] && current_packages+=("$line")
                 done < <(read_profile_section "$profile_file" "packages")
@@ -199,7 +198,6 @@ _cmd_add() {
 
     update_profile_section "$profile_file" "profiles" "${selected[@]}"
 
-    local all_profiles=()
     local all_profiles=()
     while IFS= read -r line; do
         [[ -n "$line" ]] && all_profiles+=("$line")
@@ -379,7 +377,6 @@ _cmd_install() {
 
     update_profile_section "$profile_file" "packages" "$@"
 
-    local all_packages=()
     local all_packages=()
     while IFS= read -r line; do
         [[ -n "$line" ]] && all_packages+=("$line")
